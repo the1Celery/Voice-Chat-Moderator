@@ -1,0 +1,105 @@
+import pyaudio #Detects and records user audio
+import wave #Gives python the ability to read wav formats
+import speech_recognition as sr #Allows program to turn audio into string
+import random # selects random good phrase
+import pyttsx3 # pyttsx3 is a text to speech voice that we’re using
+
+good_phrases = ["You're awesome!", "This rocks!", "Doing Good!"]
+flag = 0
+
+chunk = 1024  # Record in chunks of 1024 samples
+sample_format = pyaudio.paInt16  # 16 bits per sample
+channels = 2
+fs = 44100  # Record at 44100 samples per second
+seconds = 15
+filename = "output.wav"
+
+p = pyaudio.PyAudio()  # Create an interface to PortAudio
+
+print('Recording')
+
+stream = p.open(format=sample_format,
+                channels=channels,
+                rate=fs,
+                frames_per_buffer=chunk,
+                input=True)
+
+frames = []  # Initialize array to store frames
+
+# Store data in chunks for 3 seconds
+for i in range(0, int(fs / chunk * seconds)):
+    data = stream.read(chunk)
+    frames.append(data)
+
+# Stop and close the stream
+stream.stop_stream()
+stream.close()
+# Terminate the PortAudio interface
+p.terminate()
+
+print('Finished recording')
+
+# Save the recorded data as a WAV file
+wf = wave.open(filename, 'wb')
+wf.setnchannels(channels)
+wf.setsampwidth(p.get_sample_size(sample_format))
+wf.setframerate(fs)
+wf.writeframes(b''.join(frames))
+wf.close()
+
+# Going to have to Change File Name Based on File System
+filename = r"C:\UMBC\CMSC 201\HackUMBC VoiceCom Censoring\output.wav"
+
+# initialize the recognizer
+r = sr.Recognizer()
+
+# opens the file
+with sr.AudioFile(filename) as source:
+    # listen for the data (load audio to memory)
+    audio_data = r.record(source)
+    # recognize (convert from speech to text)
+    text = r.recognize_google(audio_data)
+    print("Speech To Text")
+    text = text.lower()
+    text_split = text.split()
+
+    # Creates the dictionary for bad word list (vegetables)
+    new_dict = {}
+    words = []
+    myFile = open('vegetables_bad.txt', 'r')
+    for line in myFile:
+        line2 = line.split()
+        group = line2[0]
+        name = line2[1].lower()
+        words.append(name)
+        new_dict[group] = name
+
+    for element in text_split:
+        # Put in list of bad words bellow
+        if element in words:
+            good_random_phrase = random.choice(good_phrases)
+            print("BAD PHRASE!")
+            print("Says: " + good_random_phrase)
+            language = "en"
+            flag = 1
+
+            engine = pyttsx3.init()
+
+            rate = engine.getProperty('rate')  # getting details of current speaking rate
+            engine.setProperty('rate', 125)  # setting up new voice rate
+
+            engine.say(good_random_phrase)
+            engine.runAndWait()
+            # Plays text in background rather than calling mp3 player
+
+    # if not detect of bad word list then runs original text
+    if flag == 0:
+        # play original wav file
+        print("Says: " + text)
+        engine = pyttsx3.init()
+
+        rate = engine.getProperty('rate')  # getting details of current speaking rate
+        engine.setProperty('rate', 125)  # setting up new voice rate
+
+        engine.say(text)
+        engine.runAndWait()
